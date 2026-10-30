@@ -1,0 +1,104 @@
+replicaCount: 2
+
+image:
+  repository: 123456789012.dkr.ecr.ap-south-1.amazonaws.com/pickandorder-product-service
+  tag: "replace-me"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  # Set eks.amazonaws.com/role-arn only if the workload needs AWS API access.
+  # Prefer IRSA/Pod Identity over static AWS credentials.
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+containerPort: 3001
+
+service:
+  type: ClusterIP
+  port: 3001
+
+env:
+  nodeEnv: production
+  logLevel: info
+  kafkaEnabled: "true"
+  kafkaClientId: pickandorder-product-service
+  kafkaBrokers: ""
+  kafkaProductTopic: product.events
+  kafkaCaPath: /app/certs/aiven-ca.pem
+
+existingSecret: product-service-secrets
+aivenCaSecret:
+  name: product-service-aiven-ca
+  key: aiven-ca.pem
+
+# AWS Load Balancer Controller creates the ALB from this Ingress.
+# Disabled by default. Use HTTPS and an ACM certificate in real environments.
+ingress:
+  enabled: false
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    # Set this per environment to a valid ACM certificate ARN:
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:REGION:ACCOUNT:certificate/ID
+  hosts:
+    - host: product.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+probes:
+  startup:
+    enabled: true
+    path: /health
+    periodSeconds: 5
+    failureThreshold: 30
+  readiness:
+    path: /health
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  liveness:
+    path: /health
+    periodSeconds: 20
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+terminationGracePeriodSeconds: 20
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: pickandorder-prod
+  namespace: argocd
+spec:
+  goTemplate: false
+  generators:
+    - git:
+        repoURL: https://github.com/YOUR_ORG/pickandorder-gitops.git
+        revision: main
+        directories:
+          - path: clusters/prod/apps/*
+  template:
+    metadata:
+      name: 'prod-{{path.basename}}'
+      labels:
+        app.kubernetes.io/part-of: pickandorder
+        pickandorder.io/environment: prod
+        pickandorder.io/service: '{{path.basename}}'
+    spec:
+      project: default
+      sources:
+        - repoURL: https://github.com/YOUR_ORG/pickandorder-gitops.git
+          targetRevision: main
+          path: 'charts/{{path.basename}}'
+          helm:
+            valueFiles:
+              - '$values/clusters/prod/apps/{{path.basename}}/values.yaml'
+        - repoURL: https://github.com/YOUR_ORG/pickandorder-gitops.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: pickandorder
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - PruneLast=true

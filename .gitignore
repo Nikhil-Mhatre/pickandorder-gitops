@@ -1,0 +1,14 @@
+# Local credentials and certificates
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local/editor artifacts
+.DS_Store
+.vscode/
+.idea/
+*.swp

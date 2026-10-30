@@ -1,0 +1,44 @@
+replicaCount: 2
+
+image:
+  repository: 123456789012.dkr.ecr.ap-south-1.amazonaws.com/pickandorder-product-service
+  # Production image tag is promoted through a reviewed GitOps pull request.
+  tag: "replace-with-approved-release-tag"
+
+env:
+  nodeEnv: production
+  logLevel: info
+  kafkaEnabled: "true"
+  kafkaClientId: pickandorder-product-service
+  kafkaBrokers: "replace-with-aiven-bootstrap-host:port"
+  kafkaProductTopic: product.events
+  kafkaCaPath: /app/certs/aiven-ca.pem
+
+existingSecret: product-service-secrets
+aivenCaSecret:
+  name: product-service-aiven-ca
+  key: aiven-ca.pem
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ap-south-1:123456789012:certificate/REPLACE-ME"
+  hosts:
+    - host: product.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 768Mi

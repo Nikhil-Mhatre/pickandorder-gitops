@@ -1,0 +1,44 @@
+replicaCount: 1
+
+image:
+  repository: 123456789012.dkr.ecr.ap-south-1.amazonaws.com/pickandorder-product-service
+  # CI updates this tag to an immutable commit SHA after publishing the image.
+  tag: "replace-with-image-sha"
+
+env:
+  nodeEnv: production
+  logLevel: debug
+  kafkaEnabled: "true"
+  kafkaClientId: pickandorder-product-service-dev
+  kafkaBrokers: "replace-with-aiven-bootstrap-host:port"
+  kafkaProductTopic: product.events
+  kafkaCaPath: /app/certs/aiven-ca.pem
+
+existingSecret: product-service-secrets
+aivenCaSecret:
+  name: product-service-aiven-ca
+  key: aiven-ca.pem
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ap-south-1:123456789012:certificate/REPLACE-ME"
+  hosts:
+    - host: product-dev.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

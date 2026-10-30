@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: pickandorder-dev
+  namespace: argocd
+spec:
+  goTemplate: false
+  generators:
+    - git:
+        repoURL: https://github.com/YOUR_ORG/pickandorder-gitops.git
+        revision: main
+        directories:
+          - path: clusters/dev/apps/*
+  template:
+    metadata:
+      name: 'dev-{{path.basename}}'
+      labels:
+        app.kubernetes.io/part-of: pickandorder
+        pickandorder.io/environment: dev
+        pickandorder.io/service: '{{path.basename}}'
+    spec:
+      project: default
+      sources:
+        # Helm chart source. Each service owns a chart under charts/<service-name>.
+        - repoURL: https://github.com/YOUR_ORG/pickandorder-gitops.git
+          targetRevision: main
+          path: 'charts/{{path.basename}}'
+          helm:
+            valueFiles:
+              - '$values/clusters/dev/apps/{{path.basename}}/values.yaml'
+        # Values-only source, referenced by $values above.
+        - repoURL: https://github.com/YOUR_ORG/pickandorder-gitops.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: pickandorder
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - PruneLast=true
